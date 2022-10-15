@@ -4,7 +4,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.title('CSVファイルを読み込んで、グラフを表示する')
+st.title('📉　CSVファイルを読み込んで、グラフを表示する')
 st.write('## ファイルを読み込む。')
 uploaded_file = st.file_uploader("Choose a csv file")
 if uploaded_file is not None:
@@ -32,9 +32,18 @@ if uploaded_file is not None:
 else:
         st.info(
             f"""
-                👆 Upload a .csv file first. Sample to try: [biostats.csv](https://people.sc.fsu.edu/~jburkardt/data/csv/biostats.csv)
+                👆 Upload a .csv file first. Sample to try 
                 """
         )
-
+        df_csv=pd.read_csv('https://github.com/stemtazoo/streamlit_app/blob/main/examples/create_chart_from_csv_file/sample.csv')
+        st.write(df_csv)
+        csv=df_csv.to_csv()
+        st.download_button(
+                "Press to Download",
+                csv,
+                "file.csv",
+                "text/csv",
+                key='download-csv'
+                )
         st.stop()
 
