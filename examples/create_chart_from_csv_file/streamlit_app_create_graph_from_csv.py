@@ -9,7 +9,11 @@ st.write('## ファイルを読み込む。')
 uploaded_file = st.file_uploader("Choose a csv file")
 if uploaded_file is not None:
     # Can be used wherever a "file-like" object is accepted:
-    df = pd.read_csv(uploaded_file)
+    try:
+        df = pd.read_csv(uploaded_file)
+    except:
+        df = pd.read_csv(uploaded_file, encoding='cp932')
+
     st.write('File name is ',uploaded_file.name)
     title_name=uploaded_file.name.replace('.csv','')
     st.write(df)
@@ -32,18 +36,8 @@ if uploaded_file is not None:
 else:
         st.info(
             f"""
-                👆 Upload a .csv file first. Sample to try 
+                👆 Upload a .csv file first. Sample to try :[sample.csv](https://github.com/stemtazoo/streamlit_app/blob/main/examples/create_chart_from_csv_file/sample.csv)
                 """
         )
-        df_csv=pd.read_csv('https://github.com/stemtazoo/streamlit_app/blob/main/examples/create_chart_from_csv_file/sample.csv')
-        st.write(df_csv)
-        csv=df_csv.to_csv()
-        st.download_button(
-                "Press to Download",
-                csv,
-                "file.csv",
-                "text/csv",
-                key='download-csv'
-                )
         st.stop()
 
