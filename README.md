@@ -1,2 +1,2 @@
-# create a line chart
-This is an application creating a line chart from a csv file.
+# streamlit_app
+This is an application using streamlit.
