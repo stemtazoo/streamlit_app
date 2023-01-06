@@ -1,4 +1,3 @@
-# create a line chart
+# Analyzing Japan's Stock Market
 This is an application Japanese stock price analysis using jquants-api-client.
 
-streamlit cloud [Link](https://examplesreliabilitystreamlit-app-create-graph-reliabil-hd8djl.streamlit.app/) 
