@@ -34,6 +34,7 @@ def add_zero(code):
 #株価を取得
 def get_prices_daily(code):
     df = jqapi.get_prices_daily_quotes(code=code)
+    df=df.dropna(subset=['AdjustmentClose'])
     return df
 
 #株価情報を取得
@@ -184,18 +185,25 @@ with st.expander("View Stock Information"):
 st.header('Price movement')
 st.write('Plot the stock price trends.')
 if any(dict_refresh_token):
-    code = st.number_input('Insert a code',min_value=1000,max_value=9999,value=1301,step=1)
+    value_code=1301
+    code = st.number_input('Insert a code',min_value=1000,max_value=9999,value=value_code,step=1)
     code_str=add_zero(code)
-    st.write('The current code is ', code_str)
-    df_list_work=df_list[df_list['Code']==code_str].copy()
-    # Boolean to resize the dataframe, stored as a session state variable
-    st.checkbox("Use container width", value=False, key="use_container_width")
-    st.dataframe(df_list_work.T, use_container_width=st.session_state.use_container_width)
-    df=get_prices_daily(code_str)
-    #chart plotly
-    fig = px.line(df, x="Date", y="AdjustmentClose", title=code_str+' price movement')
-    st.plotly_chart(fig, theme="streamlit", use_container_width=True)
-    st.dataframe(df.tail(5))
+    if code_str in df_list['Code'].unique().tolist():
+        st.write('The current code is ', code_str)
+        df_list_work=df_list[df_list['Code']==code_str].copy()
+        # Boolean to resize the dataframe, stored as a session state variable
+        st.dataframe(df_list_work.T, use_container_width=True)
+        df=get_prices_daily(code_str)
+        #moving average
+        SMA = st.slider('Moving average',min_value=5, max_value=200, value=50, step=5)
+        df['SMA'+str(SMA)]=df["AdjustmentClose"].rolling(SMA).mean()
+        #chart plotly
+        fig = px.line(df, x="Date", y=["AdjustmentClose",'SMA'+str(SMA)], title=code_str+' price movement')
+        st.plotly_chart(fig, theme="streamlit", use_container_width=True)
+        st.dataframe(df)
+    else:
+        st.write('This code does not exist.')
+st.write("reference url [link](https://github.com/J-Quants/jquants-api-client-python/blob/main/examples/20220825-001-price-movement.ipynb)")
 
 #Secter
 st.header('Sector')
@@ -318,28 +326,29 @@ if any(dict_refresh_token):
 #Dividend
 st.header('Dividend')
 st.write('List dividend yields.')
-df_s=get_statements_range()
-df_s_work = df_s.copy()
-df_s_dividend=culc_dividend(df_s_work,df_p_work)
-st.dataframe(df_s_dividend)
-st.write('Plot the relationship as dividend yield on the horizontal axis and 1,3 month return on the vertical axis')
-col1, col2 = st.columns(2)
-with col1:
-    fig_1M = px.scatter(df_s_dividend.loc[df_s_dividend["配当利回り"] > 0.00]
-            , x='配当利回り', y='1ヶ月リターン', trendline="ols")
-    st.plotly_chart(fig_1M, theme="streamlit", use_container_width=True)
-with col2:
-    fig_3M = px.scatter(df_s_dividend.loc[df_s_dividend["配当利回り"] > 0.00]
-            , x='配当利回り', y='3ヶ月リターン', trendline="ols")
-    st.plotly_chart(fig_3M, theme="streamlit", use_container_width=True)
-col3, col4 = st.columns(2)
-with col3:
-    fig_1M = px.scatter(df_s_dividend.loc[df_s_dividend["予想配当利回り"] > 0.00]
-            , x='予想配当利回り', y='1ヶ月リターン', trendline="ols")
-    st.plotly_chart(fig_1M, theme="streamlit", use_container_width=True)
-with col4:
-    fig_3M = px.scatter(df_s_dividend.loc[df_s_dividend["予想配当利回り"] > 0.00]
-            , x='予想配当利回り', y='3ヶ月リターン', trendline="ols")
-    st.plotly_chart(fig_3M, theme="streamlit", use_container_width=True)
+if any(dict_refresh_token):
+    df_s=get_statements_range()
+    df_s_work = df_s.copy()
+    df_s_dividend=culc_dividend(df_s_work,df_p_work)
+    st.dataframe(df_s_dividend)
+    st.write('Plot the relationship as dividend yield on the horizontal axis and 1,3 month return on the vertical axis')
+    col1, col2 = st.columns(2)
+    with col1:
+        fig_1M = px.scatter(df_s_dividend.loc[df_s_dividend["配当利回り"] > 0.00]
+                , x='配当利回り', y='1ヶ月リターン', trendline="ols")
+        st.plotly_chart(fig_1M, theme="streamlit", use_container_width=True)
+    with col2:
+        fig_3M = px.scatter(df_s_dividend.loc[df_s_dividend["配当利回り"] > 0.00]
+                , x='配当利回り', y='3ヶ月リターン', trendline="ols")
+        st.plotly_chart(fig_3M, theme="streamlit", use_container_width=True)
+    col3, col4 = st.columns(2)
+    with col3:
+        fig_1M = px.scatter(df_s_dividend.loc[df_s_dividend["予想配当利回り"] > 0.00]
+                , x='予想配当利回り', y='1ヶ月リターン', trendline="ols")
+        st.plotly_chart(fig_1M, theme="streamlit", use_container_width=True)
+    with col4:
+        fig_3M = px.scatter(df_s_dividend.loc[df_s_dividend["予想配当利回り"] > 0.00]
+                , x='予想配当利回り', y='3ヶ月リターン', trendline="ols")
+        st.plotly_chart(fig_3M, theme="streamlit", use_container_width=True)
 
 
