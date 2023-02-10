@@ -8,7 +8,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import jquantsapi
+import mplfinance
 
 #変数
 #refresh_token
@@ -351,4 +353,108 @@ if any(dict_refresh_token):
                 , x='予想配当利回り', y='3ヶ月リターン', trendline="ols")
         st.plotly_chart(fig_3M, theme="streamlit", use_container_width=True)
 
+#Annual Dividends
+st.header('Annual Dividends')
+st.write('Annual Dividends')
+if any(dict_refresh_token):
+    pass
+    # 年間配当額の推移を表示する銘柄コードを指定します (e.g. 8697)
+    TARGET_SYMBOL = "8697"  # 日本取引所グループ
+    code_str=add_zero(TARGET_SYMBOL)
+    # 対象銘柄の株価情報を取得します
+    df_p_org = jqapi.get_prices_daily_quotes(code=code_str)
+    # 作業用にコピーします
+    df_p = df_p_org.copy()
+    # 株価が0のレコードを除外します
+    df_p = df_p.replace({0.0: np.nan}).dropna()
+    #列名変更
+    df_p_culc=df_p.set_index("Date")[[
+                "AdjustmentOpen",
+                "AdjustmentHigh",
+                "AdjustmentLow",
+                "AdjustmentClose",
+                "AdjustmentVolume"
+            ]].rename(columns={
+                "AdjustmentOpen": "Open",
+                "AdjustmentHigh": "High",
+                "AdjustmentLow": "Low",
+                "AdjustmentClose": "Close",
+                "AdjustmentVolume": "Volume",
+            })
+    # 月足のOHLCVを作成します
+    df_p_m_ohlc = df_p_culc.resample("M").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"})
+    
+    # 対象銘柄の財務情報を取得します
+    df_s_org = jqapi.get_fins_statements(code=code_str)
+  
+    # 作業用にコピーします
+    df_s = df_s_org.copy()
 
+    # 年度末情報に絞り込みます
+    df_s = df_s.loc[df_s["TypeOfCurrentPeriod"] == "FY"]
+    # float64にするために"-"および""をnp.nanに置き換えます
+    df_s.replace({"－": np.nan, "": np.nan}, inplace=True)
+    df_s.loc[:, "ResultDividendPerShareAnnual"] = df_s["ResultDividendPerShareAnnual"].astype(np.float64)
+    df_s.loc[:, "ForecastDividendPerShareAnnual"] = df_s["ForecastDividendPerShareAnnual"].astype(np.float64)
+    df_s.loc[:, "EarningsPerShare"] = df_s["EarningsPerShare"].astype(np.float64)
+    
+    # 開示順に並べ替えます
+    df_s.sort_values("DisclosedUnixTime", inplace=True)
+
+    # 配当性向を算出します
+    df_s["配当性向"] = df_s["ResultDividendPerShareAnnual"] / df_s["EarningsPerShare"]
+
+    # プロット用に配当額が存在するレコードのみに絞り込みます
+    df_plot = df_s.loc[df_s["ResultDividendPerShareAnnual"].notna()].set_index("DisclosedDate")
+    # インデックスの表記を変更します
+    df_plot.index = df_plot.index.strftime("%Y-%m-%d")
+
+    # 項目名を日本語にします
+    df_plot.index.name = "開示日"
+    df_plot.rename(columns={
+        "ResultDividendPerShareAnnual": "配当実績_合計",
+        "EarningsPerShare": "1株当たり当期純利益",
+    }, inplace=True)
+
+    #グラフを作成する。
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    # Add traces
+    # 配当額と1株あたり利益をプロットします
+    fig.add_trace(
+        go.Bar(x=df_plot.index, y=df_plot["配当実績_合計"], name="配当実績_合計"),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Bar(x=df_plot.index, y=df_plot["1株当たり当期純利益"], name="1株当たり当期純利益"),
+        secondary_y=False,
+    )
+    fig.update_layout(barmode='group')
+    # Set y-axes titles
+    
+    fig.update_yaxes(title_text="配当実績・当期純利益", secondary_y=False)
+    fig.update_yaxes(title_text="配当性向", secondary_y=True)
+    # 配当性向をプロットします
+    fig.add_trace(go.Scatter(x=df_plot.index, y=df_plot["配当性向"], mode='lines', name='配当性向'),
+                  secondary_y=True,)
+    # 銘柄名を取得します
+    name = df_list.loc[df_list["Code"] == code_str, "CompanyName"].iat[0]
+    # タイトルを設定します
+    fig.update_layout(title=f"{name}({TARGET_SYMBOL}) の年間配当推移")
+    #show chart
+    st.plotly_chart(fig, theme="streamlit", use_container_width=True)
+    
+    #candle chart
+    #st.dataframe(df_p_culc)
+    #st.dataframe(df_p_m_ohlc)
+    fig2 = go.Figure(data=[go.Candlestick(x=df_p_m_ohlc.index,
+                open=df_p_m_ohlc['Open'],
+                high=df_p_m_ohlc['High'],
+                low=df_p_m_ohlc['Low'],
+                close=df_p_m_ohlc['Close'])])
+    # タイトルを設定します
+    fig2.update_layout(title=f"{name}({TARGET_SYMBOL}) の月足チャート")
+    fig2.update_yaxes(title_text="株価")
+    #show chart
+    st.plotly_chart(fig2, theme="streamlit", use_container_width=True)
+    
