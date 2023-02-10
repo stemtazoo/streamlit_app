@@ -1,19 +1,19 @@
 # streamlit_app
 This is an application using streamlit.
 
-# DEMO
+## DEMO
 
-# Features
+## Features
 
-# Requirement
+## Requirement
 
-# Installation
+## Installation
 
-# Usage
+## Usage
 
-# Note
+## Note
 
-# Author
+## Author
 
-# License
+## License
 
