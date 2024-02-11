@@ -138,7 +138,6 @@ def culc_dividend(df_work,df_p_work):
 
     return df_work
      
-
 st.title("💹 Analyzing Japan's Stock Market")
 
 with st.expander("See overview"):
@@ -176,7 +175,6 @@ with st.expander("Read refresh tokens"):
         # J-Quants APIクライアントを初期化します
         jqapi = jquantsapi.Client(refresh_token=dict_refresh_token['refresh_token'])
     
-
 #View Stock Information
 with st.expander("View Stock Information"):
     if any(dict_refresh_token):
@@ -187,22 +185,37 @@ with st.expander("View Stock Information"):
 st.header('Price movement')
 st.write('Plot the stock price trends.')
 if any(dict_refresh_token):
-    value_code=1301
+    value_code = 1301
     code = st.number_input('Insert a code',min_value=1000,max_value=9999,value=value_code,step=1)
-    code_str=add_zero(code)
+    code_str = add_zero(code)
     if code_str in df_list['Code'].unique().tolist():
         st.write('The current code is ', code_str)
-        df_list_work=df_list[df_list['Code']==code_str].copy()
+        df_list_work = df_list[df_list['Code']==code_str].copy()
+
+        tab1, tab2, tab3 = st.tabs(["Price data", 
+                                    "Daily chart", 
+                                    "Price movements during trading hours"])
         # Boolean to resize the dataframe, stored as a session state variable
-        st.dataframe(df_list_work.T, use_container_width=True)
-        df=get_prices_daily(code_str)
-        #moving average
-        SMA = st.slider('Moving average',min_value=5, max_value=200, value=50, step=5)
-        df['SMA'+str(SMA)]=df["AdjustmentClose"].rolling(SMA).mean()
-        #chart plotly
-        fig = px.line(df, x="Date", y=["AdjustmentClose",'SMA'+str(SMA)], title=code_str+' price movement')
-        st.plotly_chart(fig, theme="streamlit", use_container_width=True)
-        st.dataframe(df)
+        with tab1:
+            st.dataframe(df_list_work.T, use_container_width=True)
+            df = get_prices_daily(code_str)
+        
+        #Daily chart and moving average
+        with tab2:
+            SMA = st.slider('Moving average',min_value=5, max_value=200, value=50, step=5)
+            df['SMA'+str(SMA)] = df["AdjustmentClose"].rolling(SMA).mean()
+            #chart plotly
+            fig = px.line(df, x="Date", y=["AdjustmentClose",'SMA'+str(SMA)], title=code_str+' price movement')
+            st.plotly_chart(fig, theme="streamlit", use_container_width=True)
+            st.dataframe(df)
+        
+        #Price movements during trading hours
+        with tab3:
+            df_hist=df.copy()
+            st.write('Which intraday price movements are represented in the histogram?')
+            df_hist['High-Open'] = df_hist['High'] - df_hist['Open']
+            fig_hist = px.histogram(df_hist, x='High-Open')
+            st.plotly_chart(fig_hist, theme="streamlit", use_container_width=True)
     else:
         st.write('This code does not exist.')
 st.write("reference url [link](https://github.com/J-Quants/jquants-api-client-python/blob/main/examples/20220825-001-price-movement.ipynb)")
